@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stop Loss (Aggregate XL) Calculator — §1.3.3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #1c2333;
+    --bg4: #21262d;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #6e7681;
+    --amber: #f0a442;
+    --amber-dim: rgba(240,164,66,0.12);
+    --blue: #58a6ff;
+    --blue-dim: rgba(88,166,255,0.1);
+    --red: #f85149;
+    --red-dim: rgba(248,81,73,0.1);
+    --green: #3fb950;
+    --green-dim: rgba(63,185,80,0.1);
+    --teal: #39d3c3;
+    --teal-dim: rgba(57,211,195,0.1);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .site-header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .site-header-left { display: flex; align-items: center; gap: 14px; }
+  .site-logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--amber);
+    letter-spacing: 0.02em;
+  }
+  .site-sep { width: 1px; height: 20px; background: var(--border); }
+  .site-title { font-size: 13px; color: var(--text2); }
+  .thesis-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    background: var(--amber-dim);
+    color: var(--amber);
+    border: 1px solid rgba(240,164,66,0.25);
+    border-radius: 20px;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 2rem 2.5rem;
+  }
+  .hero-inner { max-width: 960px; margin: 0 auto; }
+  .hero-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 4vw, 40px);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+  }
+  .hero-title span { color: var(--amber); }
+  .hero-sub {
+    font-size: 15px;
+    color: var(--text2);
+    max-width: 640px;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+  }
+  .hero-formula {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 0.75rem 1.25rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .hero-formula .eq-label { color: var(--text3); font-size: 12px; }
+  .hero-formula .eq-main { color: var(--teal); }
+  .hero-formula .eq-ref { color: var(--text3); font-size: 11px; margin-left: 8px; }
+
+  /* ── Main layout ── */
+  .main { max-width: 960px; margin: 0 auto; padding: 2rem; }
+
+  /* ── Section title ── */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    margin: 2rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    width: 3px;
+    height: 16px;
+    background: var(--amber);
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  /* ── Controls grid ── */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .ctrl-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .ctrl-card:hover { border-color: var(--border2); }
+  .ctrl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+  }
+  .ctrl-name { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+  .ctrl-hint { font-size: 10px; color: var(--text3); }
+  .ctrl-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 26px;
+    font-weight: 500;
+    margin-bottom: 10px;
+    line-height: 1;
+  }
+  .ctrl-value.amber { color: var(--amber); }
+  .ctrl-value.blue { color: var(--blue); }
+  .ctrl-value.teal { color: var(--teal); }
+  .ctrl-range {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-top: 4px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bg4);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--text);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.08);
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+  input[type=range]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(255,255,255,0.15); }
+  input[type=range].amber-track { background: linear-gradient(to right, var(--amber) var(--pct, 25%), var(--bg4) var(--pct, 25%)); }
+  input[type=range].blue-track  { background: linear-gradient(to right, var(--blue)  var(--pct, 25%), var(--bg4) var(--pct, 25%)); }
+  input[type=range].teal-track  { background: linear-gradient(to right, var(--teal)  var(--pct, 25%), var(--bg4) var(--pct, 25%)); }
+
+  /* ── KPI grid ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .kpi-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+  .kpi-val { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 500; line-height: 1; margin-bottom: 3px; }
+  .kpi-sub { font-size: 11px; color: var(--text3); }
+  .kpi-card.kpi-amber { border-top: 2px solid var(--amber); }
+  .kpi-card.kpi-blue  { border-top: 2px solid var(--blue);  }
+  .kpi-card.kpi-green { border-top: 2px solid var(--green); }
+  .kpi-card.kpi-red   { border-top: 2px solid var(--red);   }
+  .kpi-card.kpi-teal  { border-top: 2px solid var(--teal);  }
+  .kpi-card.kpi-dim   { border-top: 2px solid var(--border2); }
+  .kpi-val.amber { color: var(--amber); }
+  .kpi-val.blue  { color: var(--blue);  }
+  .kpi-val.green { color: var(--green); }
+  .kpi-val.red   { color: var(--red);   }
+  .kpi-val.teal  { color: var(--teal);  }
+
+  /* ── Layer bar ── */
+  .layer-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .layer-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+  .layer-bar {
+    height: 44px;
+    display: flex;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+  .layer-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 500;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 0 4px;
+  }
+  .layer-seg.c1   { background: rgba(240,164,66,0.35); color: var(--amber); border-right: 1px solid rgba(240,164,66,0.5); }
+  .layer-seg.ri   { background: rgba(88,166,255,0.25); color: var(--blue);  border-right: 1px solid rgba(88,166,255,0.4); }
+  .layer-seg.c2   { background: rgba(248,81,73,0.25);  color: var(--red);   }
+  .layer-seg.gap  { background: var(--bg3); color: var(--text3); font-size: 10px; }
+  .layer-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot  { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── Party split ── */
+  .party-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 540px) { .party-grid { grid-template-columns: 1fr; } }
+  .party-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+  }
+  .party-card.cedent  { border-left: 3px solid var(--amber); }
+  .party-card.reinsurer { border-left: 3px solid var(--blue); }
+  .party-name {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text3);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .party-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .party-row:last-child { border-bottom: none; }
+  .party-row .pval {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .party-row.total .pval.amber { color: var(--amber); }
+  .party-row.total .pval.blue  { color: var(--blue);  }
+  .party-row.total { font-weight: 500; color: var(--text); font-size: 14px; padding-top: 8px; }
+
+  /* ── Progress bars ── */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0;
+    font-size: 12px;
+    color: var(--text3);
+  }
+  .progress-label { width: 110px; flex-shrink: 0; }
+  .progress-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--bg4);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .progress-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+    width: 52px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ── Scenario table ── */
+  .table-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--bg3);
+    padding: 10px 14px;
+    text-align: right;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  thead th:first-child { text-align: left; }
+  tbody td {
+    padding: 9px 14px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text2);
+  }
+  tbody td:first-child {
+    text-align: left;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 500;
+    color: var(--text);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.active-row td { background: var(--bg3); }
+  tbody tr.active-row td:first-child::after {
+    content: ' ←';
+    color: var(--amber);
+    font-size: 11px;
+  }
+  .tc { color: var(--amber) !important; }
+  .tr { color: var(--blue) !important; }
+  .tx { color: var(--red) !important; }
+  .tg { color: var(--green) !important; }
+
+  /* ── Chart ── */
+  .chart-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .chart-card-title {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chart-legend {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--text3);
+  }
+  .chart-legend-item { display: flex; align-items: center; gap: 5px; }
+  .chart-legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .chart-wrap { position: relative; height: 280px; }
+
+  /* ── Footer ── */
+  .site-footer {
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 1.5rem 2rem;
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text3);
+    line-height: 1.8;
+  }
+  .site-footer a { color: var(--blue); text-decoration: none; }
+  .site-footer a:hover { text-decoration: underline; }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hero-inner, .controls-grid, .kpi-grid, .layer-wrap, .party-grid {
+    animation: fadeUp 0.5s ease both;
+  }
+  .kpi-grid         { animation-delay: 0.05s; }
+  .layer-wrap       { animation-delay: 0.1s; }
+  .party-grid       { animation-delay: 0.15s; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-left">
+    <span class="site-logo">XLPrice</span>
+    <div class="site-sep"></div>
+    <span class="site-title">Master Thesis — Non-Proportional Reinsurance</span>
+  </div>
+  <span class="thesis-badge">§ 1.3.3 Stop Loss</span>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-tag">University of Göttingen · Master's Thesis · Insurance Mathematics</p>
+    <h1 class="hero-title">Stop Loss <span>(Aggregate XL)</span><br>Reinsurance Calculator</h1>
+    <p class="hero-sub">
+      The stop loss treaty protects the cedent against an unfavourable total portfolio result
+      over one year. Unlike per-risk or Cat XL, it responds to the <em>aggregate</em> loss S.
+      The reinsurer pays R<sub>SL</sub> whenever S exceeds the retention a, up to the limit h.
+      Above a + h the cedent bears the remaining loss alone.
+    </p>
+    <div class="hero-formula">
+      <span class="eq-label">Eq. (1.10):</span>
+      <span class="eq-main">R<sub>SL</sub> = min( max(S − a, 0), h )</span>
+      <span class="eq-ref">Bernegger / Fackler &amp; Mack (2003)</span>
+    </div>
+  </div>
+</section>
+
+<main class="main">
+
+  <!-- Controls -->
+  <h2 class="section-title">Parameters</h2>
+  <div class="controls-grid">
+    <div class="ctrl-card">
+      <div class="ctrl-header">
+        <span class="ctrl-name">Aggregate Loss (S)</span>
+        <span class="ctrl-hint">€ thousands</span>
+      </div>
+      <div class="ctrl-value teal" id="s-disp">8,000</div>
+      <input type="range" class="teal-track" id="s-slider" min="0" max="30000" step="100" value="8000">
+      <div class="ctrl-range"><span>0</span><span>15,000</span><span>30,000</span></div>
+    </div>
+    <div class="ctrl-card">
+      <div class="ctrl-header">
+        <span class="ctrl-name">Retention (a)</span>
+        <span class="ctrl-hint">cedent bears first loss</span>
+      </div>
+      <div class="ctrl-value amber" id="a-disp">5,000</div>
+      <input type="range" class="amber-track" id="a-slider" min="0" max="20000" step="100" value="5000">
+      <div class="ctrl-range"><span>0</span><span>10,000</span><span>20,000</span></div>
+    </div>
+    <div class="ctrl-card">
+      <div class="ctrl-header">
+        <span class="ctrl-name">Limit (h)</span>
+        <span class="ctrl-hint">reinsurer's maximum pay</span>
+      </div>
+      <div class="ctrl-value blue" id="h-disp">10,000</div>
+      <input type="range" class="blue-track" id="h-slider" min="500" max="20000" step="100" value="10000">
+      <div class="ctrl-range"><span>500</span><span>10,000</span><span>20,000</span></div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <h2 class="section-title">Key Performance Indicators</h2>
+  <div class="kpi-grid">
+    <div class="kpi-card kpi-amber">
+      <div class="kpi-label">Cedent retained</div>
+      <div class="kpi-val amber" id="kpi-ctot">5,000</div>
+      <div class="kpi-sub" id="kpi-ctot-pct">62.5 % of S</div>
+    </div>
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-label">Reinsurer pays R<sub>SL</sub></div>
+      <div class="kpi-val blue" id="kpi-ri">3,000</div>
+      <div class="kpi-sub" id="kpi-ri-pct">37.5 % of S</div>
+    </div>
+    <div class="kpi-card kpi-green">
+      <div class="kpi-label">Recovery rate</div>
+      <div class="kpi-val green" id="kpi-rec">37.5 %</div>
+      <div class="kpi-sub">R<sub>SL</sub> / S</div>
+    </div>
+    <div class="kpi-card kpi-teal">
+      <div class="kpi-label">Treaty exhaustion</div>
+      <div class="kpi-val teal" id="kpi-exh">30.0 %</div>
+      <div class="kpi-sub">R<sub>SL</sub> / h</div>
+    </div>
+    <div class="kpi-card kpi-red">
+      <div class="kpi-label">Cedent excess (>a+h)</div>
+      <div class="kpi-val red" id="kpi-exc">0</div>
+      <div class="kpi-sub" id="kpi-exc-info">uncovered tail</div>
+    </div>
+    <div class="kpi-card kpi-dim">
+      <div class="kpi-label">Cover width a+h</div>
+      <div class="kpi-val" id="kpi-cap">15,000</div>
+      <div class="kpi-sub">ceiling of protection</div>
+    </div>
+  </div>
+
+  <!-- Layer bar -->
+  <h2 class="section-title">Aggregate Loss Layer Structure</h2>
+  <div class="layer-wrap">
+    <div class="layer-labels">
+      <span>0</span>
+      <span id="lbl-a">a = 5,000</span>
+      <span id="lbl-ah">a+h = 15,000</span>
+      <span id="lbl-s">S = 8,000</span>
+    </div>
+    <div class="layer-bar" id="layer-bar">
+      <div class="layer-seg c1"  id="seg-c1"  style="width:33%">Cedent (0→a)</div>
+      <div class="layer-seg ri"  id="seg-ri"  style="width:20%">Reinsurer</div>
+      <div class="layer-seg c2"  id="seg-c2"  style="width:0%"></div>
+      <div class="layer-seg gap" id="seg-gap" style="width:47%">Unused capacity</div>
+    </div>
+    <div style="margin:10px 0 14px;">
+      <div class="progress-row">
+        <span class="progress-label" style="color:var(--amber)">Cedent layer 1</span>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="pb-c1" style="background:var(--amber);width:33%"></div></div>
+        <span class="progress-val" id="pbv-c1">5,000</span>
+      </div>
+      <div class="progress-row">
+        <span class="progress-label" style="color:var(--blue)">Reinsurer R<sub>SL</sub></span>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="pb-ri" style="background:var(--blue);width:20%"></div></div>
+        <span class="progress-val" id="pbv-ri">3,000</span>
+      </div>
+      <div class="progress-row">
+        <span class="progress-label" style="color:var(--red)">Cedent excess</span>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="pb-c2" style="background:var(--red);width:0%"></div></div>
+        <span class="progress-val" id="pbv-c2">0</span>
+      </div>
+    </div>
+    <div class="layer-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(240,164,66,0.5)"></div>Cedent (first layer: 0 to a)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(88,166,255,0.4)"></div>Reinsurer (a to a+h)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(248,81,73,0.4)"></div>Cedent again (above a+h)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--bg3);border:1px solid var(--border2)"></div>Unused capacity</div>
+    </div>
+  </div>
+
+  <!-- Party split -->
+  <h2 class="section-title">Detailed Allocation — Cedent vs Reinsurer</h2>
+  <div class="party-grid">
+    <div class="party-card cedent">
+      <div class="party-name">Cedent</div>
+      <div class="party-row">
+        <span>First layer (0 → a)</span>
+        <span class="pval tc" id="p-c1">5,000</span>
+      </div>
+      <div class="party-row">
+        <span>Retention a</span>
+        <span class="pval" id="p-a">5,000</span>
+      </div>
+      <div class="party-row">
+        <span>Excess above a+h</span>
+        <span class="pval tx" id="p-c2">0</span>
+      </div>
+      <div class="party-row">
+        <span>Share of aggregate S</span>
+        <span class="pval" id="p-cpct">62.5 %</span>
+      </div>
+      <div class="party-row total">
+        <span>Total borne</span>
+        <span class="pval amber" id="p-ctot">5,000</span>
+      </div>
+    </div>
+    <div class="party-card reinsurer">
+      <div class="party-name">Reinsurer</div>
+      <div class="party-row">
+        <span>Recovery R<sub>SL</sub></span>
+        <span class="pval tr" id="p-rsl">3,000</span>
+      </div>
+      <div class="party-row">
+        <span>Treaty limit h</span>
+        <span class="pval" id="p-h">10,000</span>
+      </div>
+      <div class="party-row">
+        <span>Layer remaining</span>
+        <span class="pval" id="p-rem">7,000</span>
+      </div>
+      <div class="party-row">
+        <span>Exhaustion R<sub>SL</sub>/h</span>
+        <span class="pval" id="p-exh">30.0 %</span>
+      </div>
+      <div class="party-row total">
+        <span>Total paid</span>
+        <span class="pval blue" id="p-ritot">3,000</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario table -->
+  <h2 class="section-title">Scenario Analysis — Loss Levels vs Current Parameters</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>S (€000)</th>
+          <th>Cedent layer 1</th>
+          <th>R<sub>SL</sub> (reinsurer)</th>
+          <th>Cedent excess</th>
+          <th>Recovery %</th>
+          <th>Exhaustion %</th>
+        </tr>
+      </thead>
+      <tbody id="scen-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Chart -->
+  <h2 class="section-title">Recovery Profile — R<sub>SL</sub> as a Function of Aggregate Loss S</h2>
+  <div class="chart-card">
+    <div class="chart-card-title">
+      <span>Piecewise linear structure: flat at 0 → linear rise → flat at h</span>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#58a6ff"></div>Reinsurer R<sub>SL</sub></div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#f0a442"></div>Cedent net retained</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#f85149;height:3px;border-radius:1px;margin-top:3px"></div>Current S</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="profileChart" role="img" aria-label="Recovery profile chart showing reinsurer payment and cedent net retained as a function of total aggregate loss S">R_SL rises from 0 once S exceeds retention a, increases linearly to h, then flattens. Cedent net retained equals S minus R_SL.</canvas>
+    </div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <p>
+    <strong>Muhammad Yousaf</strong> · Master's Thesis in Mathematics (Insurance) · University of Göttingen<br>
+    <em>"Pricing Methods of Reinsurance Retrocession XL on an XL Portfolio"</em> · Supervised at OTH Regensburg<br>
+    Section §1.3.3 Stop Loss — Reference: Bernegger (1997), Fackler &amp; Mack (2003) ·
+    <a href="https://linkedin.com/in/muhammadyousaf-de" target="_blank">linkedin.com/in/muhammadyousaf-de</a>
+  </p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<script>
+  const fmt   = v => Math.round(v).toLocaleString('de-DE');
+  const fmtP  = v => (v * 100).toFixed(1) + ' %';
+  const clamp = (v,mn,mx) => Math.max(mn, Math.min(mx, v));
+
+  let S = 8000, a = 5000, h = 10000;
+  let profileChart = null;
+
+  function compute(s, ret, lim) {
+    const rsl  = Math.min(Math.max(s - ret, 0), lim);
+    const c1   = Math.min(s, ret);
+    const c2   = Math.max(s - ret - lim, 0);
+    const ctot = c1 + c2;
+    const rec  = s > 0 ? rsl / s : 0;
+    const exh  = lim > 0 ? rsl / lim : 0;
+    return { rsl, c1, c2, ctot, rec, exh };
+  }
+
+  function setTrack(el, mn, mx, val) {
+    const pct = ((val - mn) / (mx - mn) * 100).toFixed(1) + '%';
+    el.style.setProperty('--pct', pct);
+  }
+
+  function update() {
+    const { rsl, c1, c2, ctot, rec, exh } = compute(S, a, h);
+    const cap   = a + h;
+    const total = Math.max(S, cap, 1);
+
+    // Slider tracks
+    setTrack(document.getElementById('s-slider'), 0, 30000, S);
+    setTrack(document.getElementById('a-slider'), 0, 20000, a);
+    setTrack(document.getElementById('h-slider'), 500, 20000, h);
+
+    // Display values
+    document.getElementById('s-disp').textContent = fmt(S);
+    document.getElementById('a-disp').textContent = fmt(a);
+    document.getElementById('h-disp').textContent = fmt(h);
+
+    // KPIs
+    document.getElementById('kpi-ctot').textContent     = fmt(ctot);
+    document.getElementById('kpi-ctot-pct').textContent = S > 0 ? fmtP(ctot/S) + ' of S' : '—';
+    document.getElementById('kpi-ri').textContent       = fmt(rsl);
+    document.getElementById('kpi-ri-pct').textContent   = S > 0 ? fmtP(rec) + ' of S' : '—';
+    document.getElementById('kpi-rec').textContent      = fmtP(rec);
+    document.getElementById('kpi-exh').textContent      = fmtP(exh);
+    document.getElementById('kpi-exc').textContent      = fmt(c2);
+    document.getElementById('kpi-exc-info').textContent = c2 > 0 ? 'above a+h = ' + fmt(cap) : 'none';
+    document.getElementById('kpi-cap').textContent      = fmt(cap);
+
+    // Layer bar
+    const wC1  = clamp(c1   / total * 100, 0, 100);
+    const wRi  = clamp(rsl  / total * 100, 0, 100);
+    const wC2  = clamp(c2   / total * 100, 0, 100);
+    const wGap = clamp(100 - wC1 - wRi - wC2, 0, 100);
+
+    const segC1 = document.getElementById('seg-c1');
+    const segRi = document.getElementById('seg-ri');
+    const segC2 = document.getElementById('seg-c2');
+    const segGap = document.getElementById('seg-gap');
+    segC1.style.width  = wC1.toFixed(1)  + '%';
+    segRi.style.width  = wRi.toFixed(1)  + '%';
+    segC2.style.width  = wC2.toFixed(1)  + '%';
+    segGap.style.width = wGap.toFixed(1) + '%';
+    segC1.textContent  = wC1 > 14 ? 'Cedent (0→a)' : (wC1 > 7 ? 'C1' : '');
+    segRi.textContent  = wRi > 12 ? 'Reinsurer'    : (wRi > 6 ? 'RI' : '');
+    segC2.textContent  = wC2 > 10 ? 'Excess'        : (wC2 > 5 ? 'EX' : '');
+    segGap.textContent = wGap > 14 ? 'Unused capacity' : (wGap > 6 ? '—' : '');
+
+    // Layer labels
+    document.getElementById('lbl-a').textContent  = 'a = '   + fmt(a);
+    document.getElementById('lbl-ah').textContent = 'a+h = ' + fmt(cap);
+    document.getElementById('lbl-s').textContent  = 'S = '   + fmt(S);
+
+    // Progress bars (against max of S or cap)
+    const pb = Math.max(S, cap, 1);
+    document.getElementById('pb-c1').style.width   = clamp(c1  / pb * 100, 0, 100).toFixed(1) + '%';
+    document.getElementById('pb-ri').style.width   = clamp(rsl / pb * 100, 0, 100).toFixed(1) + '%';
+    document.getElementById('pb-c2').style.width   = clamp(c2  / pb * 100, 0, 100).toFixed(1) + '%';
+    document.getElementById('pbv-c1').textContent  = fmt(c1);
+    document.getElementById('pbv-ri').textContent  = fmt(rsl);
+    document.getElementById('pbv-c2').textContent  = fmt(c2);
+
+    // Party split
+    document.getElementById('p-c1').textContent    = fmt(c1);
+    document.getElementById('p-a').textContent     = fmt(a);
+    document.getElementById('p-c2').textContent    = fmt(c2);
+    document.getElementById('p-cpct').textContent  = S > 0 ? fmtP(ctot / S) : '—';
+    document.getElementById('p-ctot').textContent  = fmt(ctot);
+    document.getElementById('p-rsl').textContent   = fmt(rsl);
+    document.getElementById('p-h').textContent     = fmt(h);
+    document.getElementById('p-rem').textContent   = fmt(Math.max(h - rsl, 0));
+    document.getElementById('p-exh').textContent   = fmtP(exh);
+    document.getElementById('p-ritot').textContent = fmt(rsl);
+
+    updateScenarios();
+    updateChart();
+  }
+
+  function updateScenarios() {
+    const cap    = a + h;
+    const points = [0, a * 0.5, a * 0.8, a, a + h * 0.25, a + h * 0.5, a + h * 0.75, cap, cap + h * 0.25, cap + h * 0.6];
+    const labels = ['No loss', '50 % of a', '80 % of a', 'At retention a', '25 % into layer', '50 % into layer', '75 % into layer', 'Layer exhausted (a+h)', '25 % above a+h', '60 % above a+h'];
+    const dists  = points.map(p => Math.abs(p - S));
+    const minDist = Math.min(...dists);
+    const body = document.getElementById('scen-body');
+    body.innerHTML = '';
+    points.forEach((s, i) => {
+      const r  = compute(s, a, h);
+      const tr = document.createElement('tr');
+      if (dists[i] === minDist) tr.className = 'active-row';
+      tr.innerHTML = `
+        <td>${labels[i]}</td>
+        <td>${fmt(s)}</td>
+        <td class="tc">${fmt(r.c1)}</td>
+        <td class="tr">${fmt(r.rsl)}</td>
+        <td class="tx">${fmt(r.c2)}</td>
+        <td class="tg">${fmtP(r.rec)}</td>
+        <td>${fmtP(r.exh)}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  function buildProfileData() {
+    const maxS = Math.max((a + h) * 1.55, S * 1.3, a * 2, 2000);
+    const N    = 100;
+    const xs   = Array.from({ length: N + 1 }, (_, i) => i / N * maxS);
+    return {
+      xs,
+      riData:  xs.map(s => compute(s, a, h).rsl),
+      cData:   xs.map(s => compute(s, a, h).ctot),
+      maxS
+    };
+  }
+
+  function initChart() {
+    const { xs, riData, cData, maxS } = buildProfileData();
+    profileChart = new Chart(document.getElementById('profileChart'), {
+      type: 'line',
+      data: {
+        labels: xs.map(s => Math.round(s)),
+        datasets: [
+          {
+            label: 'Reinsurer R_SL',
+            data: riData,
+            borderColor: '#58a6ff',
+            backgroundColor: 'rgba(88,166,255,0.07)',
+            fill: true,
+            tension: 0,
+            pointRadius: 0,
+            borderWidth: 2
+          },
+          {
+            label: 'Cedent net retained',
+            data: cData,
+            borderColor: '#f0a442',
+            backgroundColor: 'rgba(240,164,66,0.06)',
+            fill: true,
+            tension: 0,
+            pointRadius: 0,
+            borderWidth: 2,
+            borderDash: [6, 3]
+          }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          annotation: buildAnnotations(maxS),
+          tooltip: {
+            backgroundColor: '#1c2333',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#8b949e',
+            bodyColor: '#e6edf3',
+            callbacks: {
+              title: items => 'S = ' + fmt(Number(items[0].label)),
+              label: item  => item.dataset.label + ': ' + fmt(item.raw)
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'linear',
+            min: 0,
+            max: maxS,
+            ticks: {
+              color: '#6e7681',
+              font: { size: 11, family: "'IBM Plex Mono', monospace" },
+              callback: v => fmt(v),
+              maxTicksLimit: 8
+            },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          },
+          y: {
+            ticks: {
+              color: '#6e7681',
+              font: { size: 11, family: "'IBM Plex Mono', monospace" },
+              callback: v => fmt(v),
+              maxTicksLimit: 7
+            },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          }
+        }
+      }
+    });
+  }
+
+  function buildAnnotations(maxS) {
+    return {
+      annotations: {
+        retLine: {
+          type: 'line', xMin: a, xMax: a,
+          borderColor: 'rgba(240,164,66,0.6)', borderWidth: 1.5, borderDash: [4, 3],
+          label: { display: true, content: 'a', position: 'end', yAdjust: -8,
+            backgroundColor: 'rgba(0,0,0,0)', color: '#f0a442', font: { size: 10 } }
+        },
+        capLine: {
+          type: 'line', xMin: a + h, xMax: a + h,
+          borderColor: 'rgba(88,166,255,0.6)', borderWidth: 1.5, borderDash: [4, 3],
+          label: { display: true, content: 'a+h', position: 'end', yAdjust: -8,
+            backgroundColor: 'rgba(0,0,0,0)', color: '#58a6ff', font: { size: 10 } }
+        },
+        currentS: {
+          type: 'line', xMin: S, xMax: S,
+          borderColor: 'rgba(248,81,73,0.8)', borderWidth: 2, borderDash: [3, 3],
+          label: { display: true, content: 'S', position: 'start', yAdjust: 6,
+            backgroundColor: 'rgba(0,0,0,0)', color: '#f85149', font: { size: 10 } }
+        }
+      }
+    };
+  }
+
+  function updateChart() {
+    if (!profileChart) return;
+    const { xs, riData, cData, maxS } = buildProfileData();
+    profileChart.data.labels              = xs.map(s => Math.round(s));
+    profileChart.data.datasets[0].data   = riData;
+    profileChart.data.datasets[1].data   = cData;
+    profileChart.options.scales.x.max    = maxS;
+    profileChart.options.plugins.annotation = buildAnnotations(maxS);
+    profileChart.update('none');
+  }
+
+  // Slider events
+  ['s-slider', 'a-slider', 'h-slider'].forEach(id => {
+    document.getElementById(id).addEventListener('input', e => {
+      const v = parseInt(e.target.value);
+      if (id === 's-slider') S = v;
+      else if (id === 'a-slider') a = v;
+      else h = v;
+      update();
+    });
+  });
+
+  // Boot
+  initChart();
+  update();
+</script>
+</body>
+</html>
